@@ -36,18 +36,15 @@ class RelagenSpec extends FlatSpec with Matchers {
     val t = Relagen(taxInfoGen)
     val p = Relagen(personGen).withRelation[TaxInfo](
       t,
-      optional = false,
       s => t.dataGen.sample.get.copy(id = s.taxInfo)
     )
     val something = Relagen(businessOwnerGen).
       withRelation[Business](
         b,
-        optional = false,
         s => b.dataGen.sample.get.copy(id = s.business)
       ).
       withRelation[Person](
         p,
-        optional = false,
         s => p.dataGen.sample.get.copy(id = s.owner)
       )
   }
