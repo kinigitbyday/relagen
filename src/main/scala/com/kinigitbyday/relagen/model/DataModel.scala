@@ -11,7 +11,7 @@ case class Relagen[T <: Product](
   }
 
   def generate(n: Int = 10): List[Product] = {
-    (0 to n).toList.map(_ => dataGen.sample.get).
+    (1 to n).toList.map(_ => dataGen.sample.get).
       flatMap(data => List(data) ++ relations.flatMap(_.generate(data)))
   }
 }
