@@ -1,5 +1,7 @@
 package com.kinigitbyday.relagen
-import com.kinigitbyday.relagen.model.{Relagen, Relation}
+
+import com.kinigitbyday.relagen.gen.{Relagen, RelationType}
+import com.kinigitbyday.relagen.gen.implicits.RelagenImplicits._
 import org.scalacheck.Gen
 import org.scalatest.{FlatSpec, Matchers}
 
@@ -42,38 +44,50 @@ class RelagenSpec extends FlatSpec with Matchers {
 
   it should "generate data with actual relations" in {
     val generatedData = sampleRelagen.generate(5)
-    val businessOwners = generatedData.filter(_.isInstanceOf[BusinessOwner]).map(_.asInstanceOf[BusinessOwner])
+    val businessOwners = generatedData.allOfType[BusinessOwner]
     businessOwners.forall(businessOwner => {
-      val business = generatedData.filter(_.isInstanceOf[Business]).map(_.asInstanceOf[Business]).
-        find(_.id == businessOwner.business)
+      val business = generatedData.allOfType[Business].find(_.id == businessOwner.business)
 
-      val person = generatedData.filter(_.isInstanceOf[Person]).map(_.asInstanceOf[Person]).
-        find(_.id == businessOwner.owner)
+      val person = generatedData.allOfType[Person].find(_.id == businessOwner.owner)
 
       val taxInfo = person.flatMap(person =>
-        generatedData.filter(_.isInstanceOf[TaxInfo]).map(_.asInstanceOf[TaxInfo]).
-          find(_.id == person.taxInfo)
+        generatedData.allOfType[TaxInfo].find(_.id == person.taxInfo)
       )
 
       business.isDefined && person.isDefined && taxInfo.isDefined
     }) shouldBe true
   }
 
+  it should "handle one to many relations" in {
+    val generatedData = Relagen(businessOwnerGen).withRelation[Business](
+      Relagen(businessGen),
+      (s, b) => b.copy(id = s.business),
+      relationType = RelationType.OneToMany
+    ).generate(5)
+    val businessOwners = generatedData.allOfType[BusinessOwner]
+    businessOwners.forall(businessOwner => {
+      val businesses = generatedData.allOfType[Business].filter(_.id == businessOwner.business)
+      businesses.nonEmpty
+    })
+    businessOwners.exists(businessOwner => {
+      val businesses = generatedData.allOfType[Business].filter(_.id == businessOwner.business)
+      businesses.size >= 2
+    })
+  }
+
   def sampleRelagen = {
-    val b = Relagen(businessGen)
-    val t = Relagen(taxInfoGen)
-    val p = Relagen(personGen).withRelation[TaxInfo](
-      t,
-      s => t.dataGen.sample.get.copy(id = s.taxInfo)
+    val business = Relagen(businessGen)
+    val taxInfo = Relagen(taxInfoGen)
+    val person = Relagen(personGen).withRelation[TaxInfo](
+      taxInfo,
+      (s, t) => t.copy(id = s.taxInfo)
     )
-    Relagen(businessOwnerGen).
-      withRelation[Business](
-      b,
-      s => b.dataGen.sample.get.copy(id = s.business)
-    ).
-      withRelation[Person](
-      p,
-      s => p.dataGen.sample.get.copy(id = s.owner)
+    Relagen(businessOwnerGen).withRelation[Business](
+      business,
+      (s, b) => b.copy(id = s.business)
+    ).withRelation[Person](
+      person,
+      (s, p) => p.copy(id = s.owner)
     )
   }
 }
