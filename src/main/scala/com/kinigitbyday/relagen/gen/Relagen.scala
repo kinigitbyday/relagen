@@ -36,7 +36,7 @@ case class Relation[S <: Product, D <: Product](
         case RelationType.OneToOne => List(keyFunction(data, destinationEntity.dataGen.sample.get))
         case RelationType.OneToMany => Gen.listOf(destinationEntity.dataGen).suchThat(_.nonEmpty).sample.get.map(keyFunction(data, _))
       }
-      List(destinationData) ++ destinationData.flatMap(d => destinationEntity.relations.flatMap(_.generate(d)))
+      destinationData ++ destinationData.flatMap(d => destinationEntity.relations.flatMap(_.generate(d)))
     } else {
       List.empty
     }
