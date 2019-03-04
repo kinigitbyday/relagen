@@ -34,7 +34,7 @@ case class Relation[S <: Product, D <: Product](
     if (!optional || math.random > 0.5) {
       val destinationData = relationType match {
         case RelationType.OneToOne => List(keyFunction(data, destinationEntity.dataGen.sample.get))
-        case RelationType.OneToMany => Gen.listOf(destinationEntity.dataGen).suchThat(_.nonEmpty).sample.get.map(keyFunction(data, _))
+        case RelationType.OneToMany => Gen.nonEmptyListOf(destinationEntity.dataGen).sample.get.map(keyFunction(data, _))
       }
       destinationData ++ destinationData.flatMap(d => destinationEntity.relations.flatMap(_.generate(d)))
     } else {
